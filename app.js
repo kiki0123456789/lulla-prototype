@@ -1,0 +1,213 @@
+const galleryImages = {
+  "2f": {
+    main: "./assets/lulla/gallery-2f-main.png",
+    left: "./assets/lulla/gallery-2f-left.png",
+    right: "./assets/lulla/gallery-2f-right.png",
+    alt: ["2F main room", "2F bedroom", "2F floor plan"],
+  },
+  "3f": {
+    main: "./assets/lulla/gallery-3f-main.png",
+    left: "./assets/lulla/gallery-3f-left.png",
+    right: "./assets/lulla/gallery-3f-right.png",
+    alt: ["3F main room", "3F bedroom", "3F floor plan"],
+  },
+  others: {
+    main: "./assets/lulla/gallery-others-main.png",
+    left: "./assets/lulla/gallery-others-left.png",
+    right: "./assets/lulla/gallery-others-right.png",
+    alt: ["LULLA exterior", "Bathroom vanity", "Bath with ocean view"],
+  },
+};
+
+const loaderStartedAt = performance.now();
+const loadingOverlay = document.querySelector(".loading-overlay");
+const loadingDuration = 5400;
+
+function finishLoadingAnimation() {
+  document.body.classList.remove("is-loading");
+  loadingOverlay?.remove();
+}
+
+function scheduleLoadingFinish() {
+  const elapsed = performance.now() - loaderStartedAt;
+  window.setTimeout(finishLoadingAnimation, Math.max(0, loadingDuration - elapsed));
+}
+
+if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  finishLoadingAnimation();
+} else {
+  window.addEventListener("load", scheduleLoadingFinish, { once: true });
+  window.setTimeout(finishLoadingAnimation, loadingDuration + 900);
+}
+
+const galleryGrid = document.querySelector(".gallery-grid");
+const galleryMain = document.querySelector("[data-gallery-main]");
+const galleryLeft = document.querySelector("[data-gallery-left]");
+const galleryRight = document.querySelector("[data-gallery-right]");
+const fv = document.querySelector(".fv");
+const fvStage = document.querySelector(".fv-stage");
+const messageSection = document.querySelector(".invitation-section");
+const parallaxSections = document.querySelectorAll(".parallax-bg");
+const revealElements = document.querySelectorAll(".reveal-on-scroll");
+let isSnappingFromFirstView = false;
+let touchStartY = 0;
+let parallaxFrame = 0;
+let revealFrame = 0;
+
+function cssNumber(element, property) {
+  return Number.parseFloat(getComputedStyle(element).getPropertyValue(property));
+}
+
+function clampStageOffset(offset, viewportSize, stageSize) {
+  if (stageSize <= viewportSize) return (viewportSize - stageSize) / 2;
+  return Math.min(0, Math.max(viewportSize - stageSize, offset));
+}
+
+function layoutFirstView() {
+  if (!fv || !fvStage) return;
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+  const fullViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const reserveHeight = cssNumber(document.documentElement, "--footer-space") || 0;
+  const viewportHeight = Math.max(1, fullViewportHeight - reserveHeight);
+  fv.style.height = `${viewportHeight}px`;
+  const stageWidth = cssNumber(fv, "--fv-stage-width");
+  const stageHeight = cssNumber(fv, "--fv-stage-height");
+  const cardCenterX = cssNumber(fv, "--fv-card-center-x");
+  const cardCenterY = cssNumber(fv, "--fv-card-center-y");
+  const scale = Math.max(viewportWidth / stageWidth, viewportHeight / stageHeight);
+  const stageRenderedWidth = stageWidth * scale;
+  const stageRenderedHeight = stageHeight * scale;
+  const centeredX = viewportWidth / 2 - cardCenterX * scale;
+  const centeredY = viewportHeight / 2 - cardCenterY * scale;
+  const x = clampStageOffset(centeredX, viewportWidth, stageRenderedWidth);
+  const y = clampStageOffset(centeredY, viewportHeight, stageRenderedHeight);
+  fv.style.setProperty("--fv-stage-scale", String(scale));
+  fv.style.setProperty("--fv-stage-x", `${x}px`);
+  fv.style.setProperty("--fv-stage-y", `${y}px`);
+}
+
+layoutFirstView();
+window.addEventListener("load", layoutFirstView);
+window.addEventListener("resize", layoutFirstView);
+window.visualViewport?.addEventListener("resize", layoutFirstView);
+
+function getMessageTop() {
+  if (!messageSection) return 0;
+  return messageSection.getBoundingClientRect().top + window.scrollY;
+}
+
+function shouldSnapFromFirstView(deltaY) {
+  if (!fv || !messageSection || isSnappingFromFirstView || deltaY <= 0) return false;
+  const messageTop = getMessageTop();
+  return window.scrollY < messageTop - 8;
+}
+
+function snapToMessageSection() {
+  if (!messageSection) return;
+  isSnappingFromFirstView = true;
+  window.scrollTo({ top: getMessageTop(), behavior: "smooth" });
+  window.setTimeout(() => {
+    isSnappingFromFirstView = false;
+  }, 900);
+}
+
+window.addEventListener("wheel", (event) => {
+  if (!shouldSnapFromFirstView(event.deltaY)) return;
+  event.preventDefault();
+  snapToMessageSection();
+}, { passive: false });
+
+window.addEventListener("touchstart", (event) => {
+  touchStartY = event.touches[0]?.clientY ?? 0;
+}, { passive: true });
+
+window.addEventListener("touchmove", (event) => {
+  const currentY = event.touches[0]?.clientY ?? touchStartY;
+  const deltaY = touchStartY - currentY;
+  if (!shouldSnapFromFirstView(deltaY)) return;
+  event.preventDefault();
+  snapToMessageSection();
+}, { passive: false });
+
+function updateParallaxBackgrounds() {
+  parallaxFrame = 0;
+  const viewportHeight = window.innerHeight || 1;
+  parallaxSections.forEach((section) => {
+    const rect = section.getBoundingClientRect();
+    const progress = (rect.top + rect.height / 2 - viewportHeight / 2) / (viewportHeight + rect.height);
+    const offset = Math.max(-80, Math.min(80, progress * -160));
+    section.style.setProperty("--parallax-y", `${offset.toFixed(2)}px`);
+  });
+}
+
+function requestParallaxUpdate() {
+  if (parallaxFrame) return;
+  parallaxFrame = window.requestAnimationFrame(updateParallaxBackgrounds);
+}
+
+updateParallaxBackgrounds();
+window.addEventListener("load", updateParallaxBackgrounds);
+window.addEventListener("scroll", requestParallaxUpdate, { passive: true });
+window.addEventListener("resize", requestParallaxUpdate);
+window.visualViewport?.addEventListener("resize", requestParallaxUpdate);
+
+function updateRevealElements() {
+  revealFrame = 0;
+  const triggerY = (window.visualViewport?.height ?? window.innerHeight) * 0.7;
+  revealElements.forEach((element) => {
+    if (element.classList.contains("is-visible")) return;
+    if (element.getBoundingClientRect().top <= triggerY) {
+      element.classList.add("is-visible");
+    }
+  });
+}
+
+function requestRevealUpdate() {
+  if (revealFrame) return;
+  revealFrame = window.requestAnimationFrame(updateRevealElements);
+}
+
+updateRevealElements();
+window.addEventListener("load", updateRevealElements);
+window.addEventListener("scroll", requestRevealUpdate, { passive: true });
+window.addEventListener("resize", requestRevealUpdate);
+window.visualViewport?.addEventListener("resize", requestRevealUpdate);
+
+document.querySelectorAll("[data-gallery-tab]").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const key = tab.dataset.galleryTab;
+    const nextImages = galleryImages[key];
+    if (!nextImages || tab.classList.contains("is-active")) return;
+
+    document.querySelectorAll("[data-gallery-tab]").forEach((button) => {
+      const isActive = button === tab;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+    });
+
+    galleryGrid.classList.add("is-fading");
+    window.setTimeout(() => {
+      galleryMain.src = nextImages.main;
+      galleryLeft.src = nextImages.left;
+      galleryRight.src = nextImages.right;
+      galleryMain.alt = nextImages.alt[0];
+      galleryLeft.alt = nextImages.alt[1];
+      galleryRight.alt = nextImages.alt[2];
+      galleryGrid.classList.remove("is-fading");
+    }, 240);
+  });
+});
+
+document.querySelectorAll(".accordion-item").forEach((item) => {
+  item.addEventListener("click", () => {
+    const isOpen = item.getAttribute("aria-expanded") === "true";
+    item.setAttribute("aria-expanded", String(!isOpen));
+    const marker = item.querySelector("b");
+    if (!marker) return;
+    if (item.classList.contains("access-item")) {
+      marker.textContent = isOpen ? "▽" : "△";
+    } else {
+      marker.textContent = isOpen ? "+" : "-";
+    }
+  });
+});
