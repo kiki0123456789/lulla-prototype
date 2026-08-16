@@ -1,4 +1,13 @@
-const galleryImages = {
+type GalleryKey = "2f" | "3f" | "others";
+
+type GallerySet = {
+  main: string;
+  left: string;
+  right: string;
+  alt: [string, string, string];
+};
+
+const galleryImages: Record<GalleryKey, GallerySet> = {
   "2f": {
     main: "./assets/lulla/gallery-2f-main.png",
     left: "./assets/lulla/gallery-2f-left.png",
@@ -20,7 +29,7 @@ const galleryImages = {
 };
 
 const loaderStartedAt = performance.now();
-const loadingOverlay = document.querySelector(".loading-overlay");
+const loadingOverlay = document.querySelector<HTMLElement>(".loading-overlay");
 const loadingDuration = 5400;
 
 function finishLoadingAnimation() {
@@ -40,26 +49,26 @@ if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
   window.setTimeout(finishLoadingAnimation, loadingDuration + 900);
 }
 
-const galleryGrid = document.querySelector(".gallery-grid");
-const galleryMain = document.querySelector("[data-gallery-main]");
-const galleryLeft = document.querySelector("[data-gallery-left]");
-const galleryRight = document.querySelector("[data-gallery-right]");
-const fv = document.querySelector(".fv");
-const fvStage = document.querySelector(".fv-stage");
-const messageSection = document.querySelector(".invitation-section");
-const parallaxSections = document.querySelectorAll(".parallax-bg");
-const revealElements = document.querySelectorAll(".reveal-on-scroll");
+const galleryGrid = document.querySelector<HTMLElement>(".gallery-grid");
+const galleryMain = document.querySelector<HTMLImageElement>("[data-gallery-main]");
+const galleryLeft = document.querySelector<HTMLImageElement>("[data-gallery-left]");
+const galleryRight = document.querySelector<HTMLImageElement>("[data-gallery-right]");
+const fv = document.querySelector<HTMLElement>(".fv");
+const fvStage = document.querySelector<HTMLElement>(".fv-stage");
+const messageSection = document.querySelector<HTMLElement>(".invitation-section");
+const parallaxSections = document.querySelectorAll<HTMLElement>(".parallax-bg");
+const revealElements = document.querySelectorAll<HTMLElement>(".reveal-on-scroll");
 let isSnappingFromFirstView = false;
-let frozenFirstViewHeight = null;
+let frozenFirstViewHeight: number | null = null;
 let touchStartY = 0;
 let parallaxFrame = 0;
 let revealFrame = 0;
 
-function cssNumber(element, property) {
+function cssNumber(element: Element, property: string) {
   return Number.parseFloat(getComputedStyle(element).getPropertyValue(property));
 }
 
-function clampStageOffset(offset, viewportSize, stageSize) {
+function clampStageOffset(offset: number, viewportSize: number, stageSize: number) {
   if (stageSize <= viewportSize) return (viewportSize - stageSize) / 2;
   return Math.min(0, Math.max(viewportSize - stageSize, offset));
 }
@@ -97,7 +106,7 @@ function getMessageTop() {
   return messageSection.getBoundingClientRect().top + window.scrollY;
 }
 
-function shouldSnapFromFirstView(deltaY) {
+function shouldSnapFromFirstView(deltaY: number) {
   if (!fv || !messageSection || isSnappingFromFirstView || deltaY <= 0) return false;
   const messageTop = getMessageTop();
   return window.scrollY < messageTop - 8;
@@ -179,13 +188,13 @@ window.addEventListener("scroll", requestRevealUpdate, { passive: true });
 window.addEventListener("resize", requestRevealUpdate);
 window.visualViewport?.addEventListener("resize", requestRevealUpdate);
 
-document.querySelectorAll("[data-gallery-tab]").forEach((tab) => {
+document.querySelectorAll<HTMLButtonElement>("[data-gallery-tab]").forEach((tab) => {
   tab.addEventListener("click", () => {
-    const key = tab.dataset.galleryTab;
-    const nextImages = galleryImages[key];
-    if (!nextImages || tab.classList.contains("is-active")) return;
+    const key = tab.dataset.galleryTab as GalleryKey | undefined;
+    const nextImages = key ? galleryImages[key] : null;
+    if (!galleryGrid || !galleryMain || !galleryLeft || !galleryRight || !nextImages || tab.classList.contains("is-active")) return;
 
-    document.querySelectorAll("[data-gallery-tab]").forEach((button) => {
+    document.querySelectorAll<HTMLButtonElement>("[data-gallery-tab]").forEach((button) => {
       const isActive = button === tab;
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", String(isActive));
@@ -204,16 +213,14 @@ document.querySelectorAll("[data-gallery-tab]").forEach((tab) => {
   });
 });
 
-document.querySelectorAll(".accordion-item").forEach((item) => {
+document.querySelectorAll<HTMLButtonElement>(".accordion-item").forEach((item) => {
   item.addEventListener("click", () => {
     const isOpen = item.getAttribute("aria-expanded") === "true";
     item.setAttribute("aria-expanded", String(!isOpen));
-    const marker = item.querySelector("b");
+    const marker = item.querySelector<HTMLElement>("b");
     if (!marker) return;
-    if (item.classList.contains("access-item")) {
-      marker.textContent = isOpen ? "▽" : "△";
-    } else {
-      marker.textContent = isOpen ? "+" : "-";
-    }
+    marker.textContent = item.classList.contains("access-item")
+      ? isOpen ? "▽" : "△"
+      : isOpen ? "+" : "-";
   });
 });
