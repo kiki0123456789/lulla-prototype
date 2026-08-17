@@ -15,15 +15,15 @@ const galleryImages: Record<GalleryKey, GallerySet> = {
     alt: ["2F main room", "2F bedroom", "2F floor plan"],
   },
   "3f": {
-    main: "./assets/lulla/gallery-3f-main.png",
-    left: "./assets/lulla/gallery-3f-left.png",
-    right: "./assets/lulla/gallery-3f-right.png",
+    main: "./assets/lulla/gallery-3f-main.png?v=20260817-gallery-3f",
+    left: "./assets/lulla/gallery-3f-left.png?v=20260817-gallery-3f",
+    right: "./assets/lulla/gallery-3f-right.png?v=20260817-gallery-3f",
     alt: ["3F main room", "3F bedroom", "3F floor plan"],
   },
   others: {
-    main: "./assets/lulla/gallery-others-main.png",
-    left: "./assets/lulla/gallery-others-left.png",
-    right: "./assets/lulla/gallery-others-right.png",
+    main: "./assets/lulla/gallery-others-main.png?v=20260817-gallery-others",
+    left: "./assets/lulla/gallery-others-left.png?v=20260817-gallery-others",
+    right: "./assets/lulla/gallery-others-right.png?v=20260817-gallery-others",
     alt: ["LULLA exterior", "Bathroom vanity", "Bath with ocean view"],
   },
 };
@@ -168,10 +168,12 @@ window.visualViewport?.addEventListener("resize", requestParallaxUpdate);
 
 function updateRevealElements() {
   revealFrame = 0;
-  const triggerY = (window.visualViewport?.height ?? window.innerHeight) * 0.7;
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const triggerY = viewportHeight * 0.78;
+  const nearPageEnd = window.scrollY + viewportHeight >= document.documentElement.scrollHeight - 24;
   revealElements.forEach((element) => {
     if (element.classList.contains("is-visible")) return;
-    if (element.getBoundingClientRect().top <= triggerY) {
+    if (element.getBoundingClientRect().top <= triggerY || nearPageEnd) {
       element.classList.add("is-visible");
     }
   });
